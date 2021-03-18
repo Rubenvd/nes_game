@@ -87,28 +87,32 @@ palette_sprites:
     RTS
 .endproc
 
-.proc draw_sprite_try
+.proc draw_sprite   ; pattern_table_offset sprite_index flags
     prologue
 
     ; the real code
-    ldarg 1
+    CLC
+    ldarg 1         ; pattern_table_offset
+    ROL
+    ROL
     TAX
     
-    LDA x_pos
-    STA $0200, X    ; x_pos
+    LDA y_pos
+    STA $0200, X    ; y_pos
 
     INX
     ldarg 2
-    STA $0200, X    ; index
+    STA $0200, X    ; sprite_index
     
     INX
     ldarg 3
     STA $0200, X    ; flags
 
     INX
-    LDA y_pos
-    STA $0200, X
+    LDA x_pos
+    STA $0200, X    ; x_pos
     
+    CLC
     epilogue 3
 
     RTS

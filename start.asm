@@ -7,6 +7,8 @@
     tmp:            .res 1 ; temporary variable
     x_pos:          .res 1 ; when passing x to a function
     y_pos:          .res 1 ; when passing y to a function
+    mario_x:        .res 1
+    mario_y:        .res 1
     tmpX:           .res 1
     tmpSP:          .res 1
     retVal:         .res 2 ; return value of a function, if any
@@ -29,30 +31,69 @@ reset:
     JSR load_palette
     JSR init_ppu
 
-Forever:
+    set mario_x, #$50
+    set mario_y, #$80
+
     JSR wait_for_nmi
+Forever:
     
-    INC $0700
-    set x_pos, $0700
-    set y_pos, $0700
-    
-    LDA #$40
-    PHA
-
+    set x_pos, mario_x
+    set y_pos, mario_y
     LDA #$00
     PHA
-
+    LDA #$36
+    PHA
     LDA #$00
     PHA
+    JSR draw_sprite
 
-    JSR draw_sprite_try
-
-    LDA #$2
+    LDA mario_y
+    STA y_pos
+    LDA mario_x
+    CLC
+    ADC #$08
+    STA x_pos
+    LDA #$00
     PHA
-    LDA #$11
+    LDA #$37
     PHA
-    JSR rec_mul
+    LDA #$01
+    PHA
+    JSR draw_sprite
 
+    LDA mario_x
+    STA x_pos
+    LDA mario_y
+    CLC
+    ADC #$08
+    STA y_pos
+    LDA #$00
+    PHA
+    LDA #$38
+    PHA
+    LDA #$02
+    PHA
+    JSR draw_sprite
+
+    LDA mario_y
+    CLC
+    ADC #$08
+    STA y_pos
+    LDA mario_x
+    CLC
+    ADC #$08
+    STA x_pos
+    LDA #$00
+    PHA
+    LDA #$39
+    PHA
+    LDA #$03
+    PHA
+    JSR draw_sprite
+
+    JMP check_controls
+    after_check:
+    JSR wait_for_nmi
     JSR load_sprite
 
     JMP Forever
@@ -60,36 +101,52 @@ Forever:
 irq:
     RTI
 
-.proc rec_mul
-    prologue
+check_controls:
+    CONTROLLER_1 = $4016
+    CONTROLLER_2 = $4017
 
-    NOP
-    NOP
-    ldarg 1
-    TAX
-    ldarg 2
-    TAY
-    BEQ skipScroll
-    TXA
-    ROL
-    DEY
-    
-    STA tmp
-    TYA
-    PHA
-    LDA tmp
-    PHA
+    set CONTROLLER_1, #$01
+    set CONTROLLER_1, #$00
 
-    JSR rec_mul
-    JMP endfunction
-    skipScroll:
-    STX retVal
-    endfunction:
-    NOP
-    NOP
-    epilogue 2
-    RTS
-.endproc
+    LDA CONTROLLER_1    ; A
+    LDA CONTROLLER_1    ; B
+    LDA CONTROLLER_1    ; Select
+    LDA CONTROLLER_1    ; Start
+
+    LDA CONTROLLER_1    ; Up
+    AND #$01
+    BEQ up_not_pressed
+    LDX mario_y
+    DEX
+    STX mario_y
+    up_not_pressed:
+
+    LDA CONTROLLER_1    ; Down
+    AND #$01
+    BEQ down_not_pressed
+    LDX mario_y
+    INX
+    STX mario_y
+    down_not_pressed:
+
+    LDA CONTROLLER_1    ; Left
+    AND #$01
+    BEQ left_not_pressed
+    LDX mario_x
+    DEX
+    STX mario_x
+    left_not_pressed:
+
+    LDA CONTROLLER_1    ; Right
+    AND #$01
+    BEQ right_not_pressed
+    LDX mario_x
+    INX
+    STX mario_x
+    right_not_pressed:
+
+    JMP after_check
+
 
 .segment "OAM"
     oam: .res 256        ; sprite OAM data to be uploaded by DMA
