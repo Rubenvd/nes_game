@@ -1,12 +1,11 @@
-.proc wait_for_nmi
-    PHA
+wait_for_nmi:
     LDA nmi_count
     nmi_check_loop:
         CMP nmi_count
     BEQ nmi_check_loop
-    PLA
-    RTS
-.endproc
+    LDA #$0
+    STA sprite_bank_offset
+JMP wait_for_nmi_ret
 
 nmi:
     INC nmi_count

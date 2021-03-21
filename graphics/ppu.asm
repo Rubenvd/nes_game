@@ -79,13 +79,12 @@ palette_sprites:
     RTS
 .endproc
 
-.proc load_sprite
+load_sprite:
     PHA
     set OAM_ADDR, #$00
     set OAM_DMA, #$02
     PLA
-    RTS
-.endproc
+JMP load_sprite_ret
 
 .proc draw_sprite   ; pattern_table_offset sprite_index flags
     prologue
@@ -112,9 +111,35 @@ palette_sprites:
     LDA x_pos
     STA $0200, X    ; x_pos
     
-    CLC
     epilogue 3
 
     RTS
 .endproc
 
+.proc fast_sprite
+    SPRITE_BANK = $0200
+    prologue
+    
+    LDX sprite_bank_offset
+
+    LDA sprite_y_pos
+    STA SPRITE_BANK, X 
+
+    INX
+    LDA sprite_index
+    STA SPRITE_BANK, X
+
+    INX
+    LDA sprite_flags
+    STA SPRITE_BANK, X
+
+    INX
+    LDA sprite_x_pos
+    STA SPRITE_BANK, X
+
+    INX
+    STX sprite_bank_offset
+
+    epilogue 0
+    RTS
+.endproc
