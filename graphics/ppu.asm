@@ -55,75 +55,47 @@ palette_sprites:
 
 .segment "CODE"
 
-.proc init_ppu
-    PHA
-    set PPU_CTRL, #$80
-    set PPU_MASK, #$10
-    PLA
-    RTS
-.endproc
+init_ppu:
+    set PPU_CTRL, #$90
+    set PPU_MASK, #$1E
+JMP init_ppu_ret
 
-.proc load_palette
+init_scroll:
+    LDA PPU_STATUS
+    LDA #$00
+    STA PPU_SCROLL
+    LDA #$00
+    STA PPU_SCROLL
+JMP init_scroll_ret
+
+load_palette:
     PHA
     LDA PPU_STATUS      ; read makes us reset the latch
     set PPU_ADDR, #$3F
     set PPU_ADDR, #$00  ; load $3F00 as the PPU address
     LDX #$00
-    loadPalette:
+    :
         LDA palette_background, X
         STA PPU_DATA    ; write data to PPU_ADDR
         INX
         CPX #$20
-    BNE loadPalette     ; go over it #20 times (32)
+    BNE :-     ; go over it #20 times (32)
     PLA
-    RTS
-.endproc
+JMP load_palette_ret
 
 load_sprite:
-    PHA
     set OAM_ADDR, #$00
     set OAM_DMA, #$02
-    PLA
 JMP load_sprite_ret
-
-.proc draw_sprite   ; pattern_table_offset sprite_index flags
-    prologue
-
-    ; the real code
-    CLC
-    ldarg 1         ; pattern_table_offset
-    ROL
-    ROL
-    TAX
-    
-    LDA y_pos
-    STA $0200, X    ; y_pos
-
-    INX
-    ldarg 2
-    STA $0200, X    ; sprite_index
-    
-    INX
-    ldarg 3
-    STA $0200, X    ; flags
-
-    INX
-    LDA x_pos
-    STA $0200, X    ; x_pos
-    
-    epilogue 3
-
-    RTS
-.endproc
 
 .proc fast_sprite
     SPRITE_BANK = $0200
     prologue
-    
+
     LDX sprite_bank_offset
 
     LDA sprite_y_pos
-    STA SPRITE_BANK, X 
+    STA SPRITE_BANK, X
 
     INX
     LDA sprite_index
@@ -143,3 +115,90 @@ JMP load_sprite_ret
     epilogue 0
     RTS
 .endproc
+
+clear_background:
+    LDA PPU_STATUS
+    set PPU_ADDR, #$20
+    set PPU_ADDR, #$00
+    LDA #$24
+    LDY #$20
+    :
+        LDX #$20
+        :
+            STA PPU_DATA
+        DEX
+        BNE :-
+    DEY
+    BNE :--
+JMP clear_background_ret
+
+get_block_val:
+    LDA y_pos
+    CLC
+    ROL
+    ROL
+    ROL
+    ROL
+    ADC x_pos
+
+    CLC
+    ADC #<background1
+    STA background_low
+    LDA #>background1
+    ADC #$0
+    STA background_high
+    STX tmpX
+    LDX #$0
+    LDA (background_low, X)
+    LDX tmpX
+;JMP get_block_val_ret
+
+draw_background:
+    LDA PPU_STATUS
+    set PPU_ADDR, #$20
+    set PPU_ADDR, #$00
+
+    set background_low, #<background1
+    set background_high, #>background1
+
+    LDX #$00
+    LDY #$00
+    :
+        LDA (background_low), Y
+        STA PPU_DATA
+        STA PPU_DATA
+    CLC
+    INY
+    BNE :+
+    JMP draw_background_ret
+    :
+    TYA
+    AND #$0F
+    BNE :--
+
+    CPX #$00
+    BNE :+
+        LDX #$01
+        TYA
+        SEC
+        SBC #$10
+        TAY
+        JMP :--
+    :
+    LDX #$00
+    JMP :---
+JMP draw_background_ret
+
+load_attribute:
+    CLC
+    LDA PPU_STATUS
+    set PPU_ADDR, #$23
+    set PPU_ADDR, #$C0
+    LDX #$00
+    :
+        LDA attribute, X
+        STA PPU_DATA
+        INX
+        CPX #$40
+        BNE :-
+JMP load_attribute_ret

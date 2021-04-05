@@ -44,14 +44,26 @@
     STA SP
 
     PLA             ; load Y
-    TAY 
+    TAY
     PLA             ; load X
     STA tmpX
-        
+
     LDX tmpSP
-    TXS 
+    TXS
 
     LDX tmpX
+.endmacro
+
+.macro simp_prologue
+    STX tmpX
+    STY tmpY
+    STA tmpA
+.endmacro
+
+.macro simp_epilogue
+    LDX tmpX
+    LDY tmpY
+    LDA tmpA
 .endmacro
 
 .macro ldarg num
