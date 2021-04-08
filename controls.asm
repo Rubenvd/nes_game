@@ -4,12 +4,13 @@ check_controls:
 
     set CONTROLLER_1, #$01
     set CONTROLLER_1, #$00
-    LDA #$00
-    STA button_1
+    set button_1, #$00
+    
     LDX #$08
     :
+        CLC
         ROL button_1
-        LDA CONTROLLER_1    ; A
+        LDA CONTROLLER_1
         AND #$01
         ADC button_1
         STA button_1

@@ -132,27 +132,6 @@ clear_background:
     BNE :--
 JMP clear_background_ret
 
-get_block_val:
-    LDA y_pos
-    CLC
-    ROL
-    ROL
-    ROL
-    ROL
-    ADC x_pos
-
-    CLC
-    ADC #<background1
-    STA background_low
-    LDA #>background1
-    ADC #$0
-    STA background_high
-    STX tmpX
-    LDX #$0
-    LDA (background_low, X)
-    LDX tmpX
-;JMP get_block_val_ret
-
 draw_background:
     LDA PPU_STATUS
     set PPU_ADDR, #$20

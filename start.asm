@@ -10,20 +10,29 @@
 .include "./graphics/background.asm"
 .include "./graphics/nmi.asm"
 .include "./graphics/ppu.asm"
-.include "./objects/mario.asm"
+.include "./objects/guy.asm"
 .include "./controls.asm"
+.include "./tools/fixed_point.asm"
 
 reset:
     SEI
     CLD
+
+    set world_addr_hi, #>background1
+    set world_addr, #<background1
 
     JMP load_palette
     load_palette_ret:
     JMP init_ppu
     init_ppu_ret:
 
-    JMP init_mario
-    init_mario_ret:
+    set guy_addr_hi, #>guy_1
+    set guy_addr, #<guy_1
+
+    set arg_1, #$80
+    set arg_2, #$80
+    JMP guy_init
+    guy_init_ret:
 
     JMP clear_background
     clear_background_ret:
@@ -38,14 +47,15 @@ reset:
     init_scroll_ret:
 
 Forever:
-    JMP draw_mario
-    draw_mario_ret:
-
     JMP check_controls
     check_controls_ret:
 
-    JMP move_mario
-    move_mario_ret:
+    set arg_3, button_1
+    JMP guy_act
+    guy_act_ret:
+
+    JMP guy_draw
+    guy_draw_ret:
 
     JMP wait_for_nmi
     wait_for_nmi_ret:
@@ -57,4 +67,3 @@ Forever:
 
 irq:
     RTI
-

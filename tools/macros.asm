@@ -54,18 +54,6 @@
     LDX tmpX
 .endmacro
 
-.macro simp_prologue
-    STX tmpX
-    STY tmpY
-    STA tmpA
-.endmacro
-
-.macro simp_epilogue
-    LDX tmpX
-    LDY tmpY
-    LDA tmpA
-.endmacro
-
 .macro ldarg num
     .local ARGOFF
     ARGOFF = num + 5
