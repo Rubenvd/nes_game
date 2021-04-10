@@ -24,6 +24,27 @@
     RTS
 .endproc
 
+.proc sign_fp
+    ; fp is zero     => A = 0
+    ; fp is negative => A = 1
+    ; fp is positive => A = 2
+
+    LDA arg_1
+    BMI :++
+
+    ORA arg_2
+    BEQ :+
+        LDA #$02
+        RTS
+    :
+
+    LDA #$00
+    RTS
+    :
+    LDA #$01
+    RTS
+.endproc
+
 .proc mul_fp
     ; arg_1.arg_2 = arg_1.arg_2 * arg_3.arg_4
     set tmp_c, #$00

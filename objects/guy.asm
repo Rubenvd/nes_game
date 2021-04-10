@@ -47,7 +47,7 @@ guy_press_a:
     CMP GUY_STATE_IDLE
     BNE guy_press_a_ret
 
-    set arg_1, #$FC
+    set arg_1, #$FB
     set arg_2, #$80
     guy_save_dec GUY_DY
     LDA GUY_STATE_JUMPING
@@ -58,18 +58,12 @@ guy_press_l:
     set arg_1, #$FE
     set arg_2, #$80
     guy_save_dec GUY_DX
-    LDA GUY_STATE_JUMPING
-    guy_save GUY_STATE
 JMP guy_press_l_ret
 
 guy_press_r:
-    guy_load_dec GUY_DX
-
     set arg_1, #$01
     set arg_2, #$80
     guy_save_dec GUY_DX
-    LDA GUY_STATE_JUMPING
-    guy_save GUY_STATE
 JMP guy_press_r_ret
 
 guy_check_buttons:
@@ -120,6 +114,8 @@ JMP guy_check_buttons_ret
     JSR get_block_val
     CMP #$47
     BEQ :+
+    LDA GUY_STATE_JUMPING
+    guy_save GUY_STATE
     guy_save_dec GUY_Y
     RTS
     :
@@ -141,11 +137,6 @@ JMP guy_check_buttons_ret
     SBC #$08
     STA arg_1
     set arg_2, #$00
-    JSR sub_fp
-    set arg_3, arg_1
-    set arg_4, arg_2
-    guy_load_dec GUY_Y
-    JSR add_fp
     guy_save_dec GUY_Y
     RTS
 .endproc
@@ -188,11 +179,6 @@ JMP guy_check_buttons_ret
     ADC #$0F
     STA arg_1
     set arg_2, #$00
-    JSR sub_fp
-    set arg_3, arg_1
-    set arg_4, arg_2
-    guy_load_dec GUY_Y
-    JSR add_fp
     guy_save_dec GUY_Y
     RTS
 .endproc
@@ -207,16 +193,17 @@ JMP guy_check_buttons_ret
     STA x_pos           ; x_pos is nieuwe X
     guy_load GUY_Y
     STA y_pos
+    INC y_pos
     JSR get_block_val
     CMP #$47
-    ;BEQ :+
+    BEQ :+
     LDA y_pos
     CLC
     ADC #$07
     STA y_pos
     JSR get_block_val
     CMP #$47
-    ;BEQ :+
+    BEQ :+
     guy_save_dec GUY_X
     RTS
     :
@@ -229,16 +216,8 @@ JMP guy_check_buttons_ret
     AND #$F0
     CLC
     ADC #$10
-    STA arg_3
-    set arg_4, #$00         ; arg_1.arg_2 is coordinate of block to the left
-
-    guy_load_dec GUY_X
-    JSR sub_fp
-
-    set arg_3, arg_1
-    set arg_4, arg_2
-    guy_load_dec GUY_X
-    JSR sub_fp
+    STA arg_1
+    set arg_2, #$00         ; arg_1.arg_2 is coordinate of block to the left
     guy_save_dec GUY_X
     RTS
 .endproc
@@ -255,6 +234,7 @@ JMP guy_check_buttons_ret
     STA x_pos
     guy_load GUY_Y
     STA y_pos
+    INC y_pos
     JSR get_block_val
     CMP #$47
     BEQ :+
@@ -282,37 +262,34 @@ JMP guy_check_buttons_ret
     CLC
     SBC #$07                ; substract the size of the tile
     STA arg_1
-    set arg_2, #$00         ; arg_1.arg_2 is coordinate of block to the left
-    JSR sub_fp
-    set arg_3, arg_1
-    set arg_4, arg_2
-    guy_load_dec GUY_X
-    JSR add_fp
+    set arg_2, #$00
     guy_save_dec GUY_X
     RTS
 .endproc
 
 .proc detect_collision
-    ; a = guy_dy
-    ; b = guy_y
-    ;
-    ; if (get_block_val(a + b)) {
-    ;     guy_y = a + y_distance_to_block
-    ;     guy_dy = 0
-    ; }
-    guy_load GUY_DY
-    BMI :+
+    guy_load_dec GUY_DY
+    JSR sign_fp
+    CMP #$02
+    BNE :+
         JSR detect_falling_y_collision
         JMP :++
     :
+    CMP #$01
+    BNE :+
         JSR detect_jumping_y_collision
     :
-    guy_load GUY_DX
-    BMI :+
-        JSR detect_right_x_collision
+
+    guy_load_dec GUY_DX
+    JSR sign_fp
+    CMP #$01
+    BNE :+
+        JSR detect_left_x_collision
         JMP :++
     :
-        JSR detect_left_x_collision
+    CMP #$02
+    BNE :+
+        JSR detect_right_x_collision
     :
     RTS
 .endproc
@@ -327,22 +304,27 @@ guy_update_speed:
     set arg_4, arg_2
     guy_load_dec GUY_DY
     JSR add_fp
-    CLC
     guy_save_dec GUY_DY
 
     ; don't adapt speed if speed is 0
-    guy_load_dec GUY_DX
-    LDA arg_1
-    ORA arg_2
-    BEQ :+++          ; if GUY_DX != 0
-    set arg_4, #$80
-    LDA arg_1
-    BMI :+          ; if GUY DX > 0
-    set arg_3, #$FF
-    JMP :++
-    :
     set arg_3, #$00
+    set arg_4, #$00
+    guy_load_dec GUY_DX
+    JSR sign_fp
+    CMP #$01
+    BNE :+
+        ; DX is negative
+        set arg_4, #$80
+        set arg_3, #$00
+        JMP :++
     :
+    CMP #$02
+    BNE :+
+        ; DX is positive
+        set arg_4, #$80
+        set arg_3, #$FF
+    :
+    CLC
     JSR add_fp
     guy_save_dec GUY_DX
     :
@@ -361,12 +343,13 @@ guy_init:
     guy_save_dec GUY_Y
 
     set arg_1, #$00
-    set arg_2, #$10
+    set arg_2, #$30
     guy_save_dec GUY_GRAV
 
     set arg_1, #$00
     set arg_2, #$00
     guy_save_dec GUY_DX
+    guy_save_dec GUY_DY
 
     LDA GUY_STATE_IDLE
     guy_save GUY_STATE
