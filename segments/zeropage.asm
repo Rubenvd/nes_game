@@ -13,14 +13,14 @@ guy_addr_hi:    .res 1
 player_1:       .res 1  ; buttons
                         ; guy address
 
-guy_1:          .res 14 ; x_pos (decnum)
+guy_1:          .res 15 ; x_pos (decnum)
                         ; y_pos (decnum)
                         ; x_speed (decnum)
                         ; y_speed (decnum)
                         ; health (decnum)
                         ; ID
                         ; state
-guy_2:          .res 14
+guy_2:          .res 15
 
 x_pos:          .res 1 ; when passing x to a function
 y_pos:          .res 1 ; when passing y to a function

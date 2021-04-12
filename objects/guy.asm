@@ -5,10 +5,14 @@
 .define GUY_GRAV #$08
 .define GUY_HEALTH #$0A
 .define GUY_STATE #$0C
-.define GUY_ID #$0D
+.define GUY_ORIENTATION #$0D
+.define GUY_ID #$0E
 
 .define GUY_STATE_IDLE #$00
 .define GUY_STATE_JUMPING #$01
+.define GUY_STATE_FALLING #$02
+.define GUY_ORIENTATION_LEFT #$01
+.define GUY_ORIENTATION_RIGHT #$00
 
 .macro guy_load val
     ; a = the val
@@ -98,12 +102,10 @@ JMP guy_check_buttons_ret
     JSR add_fp              ; guy_y + guy_dy
     LDA arg_1
     CLC
-    ADC #$08
+    ADC #$09
     STA y_pos               ; y_pos = guy_y + 8
     guy_load GUY_X
     STA x_pos
-    CLC
-    ADC #$01
     JSR get_block_val
     CMP #$47
     BEQ :+
@@ -114,7 +116,7 @@ JMP guy_check_buttons_ret
     JSR get_block_val
     CMP #$47
     BEQ :+
-    LDA GUY_STATE_JUMPING
+    LDA GUY_STATE_FALLING
     guy_save GUY_STATE
     guy_save_dec GUY_Y
     RTS
@@ -270,25 +272,27 @@ JMP guy_check_buttons_ret
 .proc detect_collision
     guy_load_dec GUY_DY
     JSR sign_fp
-    CMP #$02
-    BNE :+
-        JSR detect_falling_y_collision
-        JMP :++
-    :
     CMP #$01
     BNE :+
         JSR detect_jumping_y_collision
+        JMP :++
+    :
+    JSR detect_falling_y_collision
     :
 
     guy_load_dec GUY_DX
     JSR sign_fp
     CMP #$01
     BNE :+
+        LDA GUY_ORIENTATION_LEFT
+        guy_save GUY_ORIENTATION
         JSR detect_left_x_collision
         JMP :++
     :
     CMP #$02
     BNE :+
+        LDA GUY_ORIENTATION_RIGHT
+        guy_save GUY_ORIENTATION
         JSR detect_right_x_collision
     :
     RTS
@@ -314,14 +318,14 @@ guy_update_speed:
     CMP #$01
     BNE :+
         ; DX is negative
-        set arg_4, #$80
+        set arg_4, #$40
         set arg_3, #$00
         JMP :++
     :
     CMP #$02
     BNE :+
         ; DX is positive
-        set arg_4, #$80
+        set arg_4, #$C0
         set arg_3, #$FF
     :
     CLC
@@ -355,6 +359,40 @@ guy_init:
     guy_save GUY_STATE
 JMP guy_init_ret
 
+.proc guy_get_sprite
+    guy_load GUY_STATE
+    CMP GUY_STATE_IDLE
+    BNE :+++
+    guy_load_dec GUY_DX
+    JSR sign_fp
+    CMP #$00
+    BNE :+
+        LDA #$01
+        RTS
+    :
+    LDA nmi_count
+    ROR
+    ROR
+    AND #$01
+    BNE :+
+    LDA #$03
+    RTS
+    :
+    LDA #$02
+    RTS
+    :
+    CMP GUY_STATE_JUMPING
+    BNE :+
+    LDA #$04
+    RTS
+    :
+    CMP GUY_STATE_FALLING
+    BNE :+
+    LDA #$05
+    RTS
+    :
+.endproc
+
 guy_act:
     ; guy_addr = guy address
     ; arg_1 = buttons
@@ -370,9 +408,14 @@ guy_act:
 JMP guy_act_ret
 
 guy_draw:
-    ; guy_addr = guy address
     set sprite_flags, #$0
-    set sprite_index, #$85
+    guy_load GUY_ORIENTATION
+    CMP GUY_ORIENTATION_LEFT
+    BNE :+
+        set sprite_flags, #$40
+    :
+    JSR guy_get_sprite
+    STA sprite_index
     guy_load GUY_X
     STA sprite_x_pos
     guy_load GUY_Y

@@ -3,6 +3,14 @@
     sta set_var
 .endmacro
 
+.macro printa
+    CLD ; I've added a print in the emulator
+.endmacro
+
+.macro enter
+    CLV
+.endmacro
+
 .macro prologue
     TXA         ; store X and Y on stack
     PHA
